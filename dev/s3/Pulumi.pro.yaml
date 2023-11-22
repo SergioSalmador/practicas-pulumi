@@ -1,7 +1,6 @@
 config:
   aws:region: eu-west-1
   s3:company: ""
-  s3:day: "7"
-  s3:env: dev
+  s3:env: pro
   s3:region: euw1
   s3:svc: s3

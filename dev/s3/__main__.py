@@ -1,29 +1,42 @@
-"""A Python Pulumi program"""
-
 import pulumi
-from pulumi_aws import s3 
-import yaml
+import pulumi_aws as aws
 
-# Leer el archivo YAML
-with open('variables.yaml', 'r') as file:
-    variables = yaml.safe_load(file)
+config = pulumi.Config()
 
 # Acceder a las variables
-env = variables['env']
-region = variables['region']
-company = variables['company']
+env = config.require("env")
+region = config.require("region")
+svc = config.require("svc")
+company = config.require("company")
+day = config.require("day")
 
-bucket_name = company + "-" + "s3" + "-" + region + "-" + env
+bucket_name = company + "-" + svc + "-" + region + "-" + env
 
-bucket = s3.Bucket(bucket_name,
-                       bucket=bucket_name,  # Esto establece el nombre exacto del bucket en S3
-                       acl="private",
-                       tags={
-                           "Environment": env,
-                           "Region": region,
-                           "Company": company,
-                           "Name": bucket_name
-                       })
+def create_s3_bucket(name, env, region, company):
+    return aws.s3.Bucket(name,
+                         bucket=name,
+                         acl="private",
+                         tags={
+                             "Environment": env,
+                             "Region": region,
+                             "Company": company,
+                             "Name": name
+                         })
 
-
-
+def set_bucket_lifecycle(bucket_arn, day):
+    return aws.s3control.BucketLifecycleConfiguration("bucketLifecycleConfiguration",
+        bucket=bucket_arn,
+        rules=[
+            aws.s3control.BucketLifecycleConfigurationRuleArgs(
+                expiration=aws.s3control.BucketLifecycleConfigurationRuleExpirationArgs(
+                    days=day,
+                ),
+                id="example-rule",
+                filter=aws.s3control.BucketLifecycleConfigurationRuleFilterArgs(
+                    prefix="*",
+                ),
+            )
+        ])
+    
+bucket = create_s3_bucket(bucket_name, env, region, company)
+bucket_lifecycle_configuration = set_bucket_lifecycle(bucket.arn, day)
